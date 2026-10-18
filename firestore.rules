@@ -1,0 +1,77 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function hasRole(role) {
+      return request.auth != null && getUserRole() == role;
+    }
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      allow update: if isAuthenticated() && (request.auth.uid == userId || hasRole('admin'));
+      allow delete: if hasRole('admin');
+    }
+
+match /attractions/{id} {
+      allow read: if true;
+      allow write: if hasRole('admin');
+    }
+
+match /accommodations/{id} {
+      allow read: if true;
+      allow write: if hasRole('admin') || hasRole('operator');
+    }
+
+match /transportation/{id} {
+      allow read: if true;
+      allow write: if hasRole('admin');
+    }
+
+    match /dining_spots/{id} {
+      allow read: if true;
+      allow write: if hasRole('admin');
+    }
+
+    match /bookings/{bookingId} {
+      allow create, read, update: if isAuthenticated();
+      allow delete: if isAuthenticated();
+    }
+
+
+match /itineraries/{itineraryId} {
+      allow create: if isAuthenticated();
+      allow read, update, delete: if isAuthenticated() && resource.data.touristId == request.auth.uid;
+    }
+
+match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if isAuthenticated();
+      allow update, delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+match /notifications/{notificationId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow delete: if hasRole('admin');
+    }
+
+match /ai_chat_logs/{logId} {
+      allow create: if isAuthenticated();
+      allow read, update, delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+match /reports/{reportId} {
+      allow read, write: if hasRole('admin');
+    }
+  }
+}
